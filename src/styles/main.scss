@@ -82,6 +82,11 @@ h1 { margin-bottom: 0; font-size: 20px; letter-spacing: -.04em; }
 .selected-hold-row i { width: 9px; height: 9px; border-radius: 50%; }
 .selected-hold-row button { width: 40px; height: 40px; border: 0; border-radius: 10px; color: $color-muted; background: transparent; font-size: 22px; }
 .cancel-edit-button { width: 100%; }
+.wall-select-label { margin-bottom: 13px; }
+.new-wall-form { display: grid; gap: 10px; margin: 13px 0; padding: 13px; border: 1px solid $color-line; border-radius: 15px; background: $color-bg; }
+.wall-upload-button { position: relative; display: flex; align-items: center; cursor: pointer; }
+.wall-upload-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.route-info small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .route-swatch { width: 11px; height: 32px; border-radius: 8px; background: $color-accent; }
 .route-info { display: grid; gap: 4px; flex: 1; }
 .route-info strong { font-size: 13px; }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import WallCanvas, { compressPhoto } from './components/WallCanvas'
-import { useAppStore, type AppMode, type HoldRole } from './store/useAppStore'
+import { DEFAULT_WALL_ID, useAppStore, type AppMode, type HoldRole } from './store/useAppStore'
 
 const grades = ['5a', '5b', '5c', '6a', '6a+', '6b', '6b+', '6c', '7a', '7a+', '7b', '7b+', '7c', '8a']
 const roleOrder: HoldRole[] = ['HAND', 'START', 'FOOT', 'TOP']
@@ -12,14 +12,19 @@ export default function App() {
   const setAppMode = useAppStore((state) => state.setAppMode)
   const holds = useAppStore((state) => state.holds)
   const routes = useAppStore((state) => state.routes)
+  const walls = useAppStore((state) => state.walls)
+  const activeWallId = useAppStore((state) => state.activeWallId)
   const progress = useAppStore((state) => state.progress)
   const saveRoute = useAppStore((state) => state.saveRoute)
+  const addWall = useAppStore((state) => state.addWall)
+  const setActiveWall = useAppStore((state) => state.setActiveWall)
   const removeRoute = useAppStore((state) => state.removeRoute)
   const updateProgress = useAppStore((state) => state.updateProgress)
-  const wallImage = useAppStore((state) => state.wallImage)
-  const setWallImage = useAppStore((state) => state.setWallImage)
+  const replaceWallImage = useAppStore((state) => state.replaceWallImage)
+  const clearWallMapping = useAppStore((state) => state.clearWallMapping)
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null)
   const [editingRouteId, setEditingRouteId] = useState<string | null>(null)
+  const [routeWallId, setRouteWallId] = useState<string | null>(null)
   const [selectedRoles, setSelectedRoles] = useState<Record<string, HoldRole>>({})
   const [transparentMode, setTransparentMode] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -29,7 +34,13 @@ export default function App() {
   const [formError, setFormError] = useState('')
   const [gradeFilter, setGradeFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [newWallName, setNewWallName] = useState('')
+  const [wallError, setWallError] = useState('')
   const selectedRoute = routes.find((route) => route.id === selectedRouteId)
+  const currentWallId = routeWallId && walls.some((wall) => wall.id === routeWallId) ? routeWallId : activeWallId
+  const activeWallHolds = holds.filter((hold) => hold.wallId === activeWallId)
+  const activeWallRoutes = routes.filter((route) => route.wallId === activeWallId)
+  const defaultRouteWallId = walls.some((wall) => wall.id === DEFAULT_WALL_ID) ? DEFAULT_WALL_ID : activeWallId
 
   useEffect(() => {
     setAppMode('VIEW')
@@ -38,10 +49,6 @@ export default function App() {
   useEffect(() => {
     if (mode === 'CREATE_ROUTE' && !editingRouteId) setSelectedRoles({})
   }, [editingRouteId, mode])
-
-  useEffect(() => {
-    if (!wallImage) setWallImage('/IMG_0525.jpg')
-  }, [setWallImage, wallImage])
 
   const filteredRoutes = useMemo(() => routes.filter((route) => {
     const current = progress.find((item) => item.routeId === route.id)?.status
@@ -53,9 +60,9 @@ export default function App() {
     setSelectedRouteId(null)
     setFormError('')
     if (nextMode === 'CREATE_ROUTE') {
-      setEditingRouteId(null); setSelectedRoles({}); setName(''); setGrade('6a'); setRating(3)
+      setEditingRouteId(null); setRouteWallId(defaultRouteWallId); setSelectedRoles({}); setName(''); setGrade('6a'); setRating(3)
     } else {
-      setEditingRouteId(null); setSelectedRoles({}); setName('')
+      setEditingRouteId(null); setRouteWallId(null); setSelectedRoles({}); setName('')
     }
     setAppMode(nextMode)
   }
@@ -66,7 +73,9 @@ export default function App() {
       return
     }
     if (mode === 'CREATE_ROUTE' && editingRouteId) {
-      setEditingRouteId(null); setSelectedRoles({}); setName(''); setFormError('')
+      setEditingRouteId(null); setRouteWallId(null); setSelectedRoles({}); setName(''); setFormError('')
+    } else if (mode === 'CREATE_ROUTE') {
+      setRouteWallId(null); setSelectedRoles({}); setName(''); setFormError('')
     }
     setAppMode('VIEW')
   }
@@ -79,7 +88,7 @@ export default function App() {
   }
 
   const handleEditRoute = (route: (typeof routes)[number]) => {
-    setEditingRouteId(route.id); setSelectedRouteId(route.id); setName(route.name); setGrade(route.grade); setRating(route.rating)
+    setEditingRouteId(route.id); setSelectedRouteId(route.id); setRouteWallId(route.wallId); setName(route.name); setGrade(route.grade); setRating(route.rating)
     setSelectedRoles(Object.fromEntries(route.holds.map(({ holdId, role }) => [holdId, role])))
     setFormError(''); setAppMode('CREATE_ROUTE')
   }
@@ -89,12 +98,12 @@ export default function App() {
     if (!name.trim()) { setFormError('Додай назву маршруту.'); return }
     if (selectedHolds.length < 2) { setFormError('Обери щонайменше дві зачіпки.'); return }
     if (!selectedHolds.some((hold) => hold.role === 'START') || !selectedHolds.some((hold) => hold.role === 'TOP')) { setFormError('Познач старт і топ маршруту.'); return }
-    const id = saveRoute({ ...(editingRouteId ? { id: editingRouteId } : {}), name: name.trim(), grade, rating, holds: selectedHolds })
-    setSelectedRouteId(id); setName(''); setSelectedRoles({}); setFormError(''); setEditingRouteId(null); setAppMode('VIEW')
+    const id = saveRoute({ ...(editingRouteId ? { id: editingRouteId } : {}), wallId: currentWallId, name: name.trim(), grade, rating, holds: selectedHolds })
+    setSelectedRouteId(id); setName(''); setSelectedRoles({}); setFormError(''); setEditingRouteId(null); setRouteWallId(null); setAppMode('VIEW')
   }
 
   const cancelRouteEdit = () => {
-    setEditingRouteId(null); setSelectedRoles({}); setName(''); setFormError(''); setAppMode('VIEW')
+    setEditingRouteId(null); setRouteWallId(null); setSelectedRoles({}); setName(''); setFormError(''); setAppMode('VIEW')
   }
 
   const deleteRoute = (routeId: string) => {
@@ -105,6 +114,7 @@ export default function App() {
   const currentProgress = selectedRoute ? progress.find((item) => item.routeId === selectedRoute.id) : undefined
   const headerTitle = selectedRoute?.name ?? (mode === 'CREATE_ROUTE' ? editingRouteId ? 'Редагувати маршрут' : 'Додати маршрут' : mode === 'ADMIN_MAPPING' ? 'Розмітка' : 'Маршрути')
   const showCanvas = mode !== 'VIEW' || Boolean(selectedRoute)
+  const canvasWallId = mode === 'VIEW' ? selectedRoute?.wallId ?? activeWallId : mode === 'CREATE_ROUTE' ? currentWallId : activeWallId
 
   return (
     <main className="app-shell">
@@ -120,20 +130,32 @@ export default function App() {
       </header>
 
       {showCanvas && <section className="canvas-section" aria-label="Полотно стіни">
-        <WallCanvas selectedRouteId={mode === 'VIEW' ? selectedRouteId : null} selectedRoles={selectedRoles} transparentUnmarked={mode === 'CREATE_ROUTE' && transparentMode} onHoldTap={mode === 'CREATE_ROUTE' ? cycleRole : undefined} />
+        <WallCanvas key={canvasWallId} wallId={canvasWallId} selectedRouteId={mode === 'VIEW' ? selectedRouteId : null} selectedRoles={selectedRoles} transparentUnmarked={mode === 'CREATE_ROUTE' && transparentMode} onHoldTap={mode === 'CREATE_ROUTE' ? cycleRole : undefined} />
       </section>}
 
       {mode === 'ADMIN_MAPPING' && <section className="quick-panel">
-        <div className="section-heading"><div><p className="eyebrow">РОЗМІТКА СТІНИ</p><h2>Зачіпки</h2></div><span className="count-pill">{holds.length}</span></div>
+        <div className="section-heading"><div><p className="eyebrow">РОЗМІТКА СТІНИ</p><h2>{walls.find((wall) => wall.id === activeWallId)?.name ?? 'Стіна'}</h2></div><span className="count-pill">{activeWallHolds.length}</span></div>
+        <label className="field-label wall-select-label">Активна стіна<select value={activeWallId} onChange={(event) => setActiveWall(event.target.value)}>{walls.map((wall) => <option key={wall.id} value={wall.id}>{wall.name}</option>)}</select></label>
         <p className="panel-copy">Торкнись фото, щоб додати зачіпку. Перетягни маркер для точного розташування; вибрану зачіпку можна видалити або змінити її розмір.</p>
-        {wallImage && <label className="secondary-button replace-photo">Змінити фото<input type="file" accept="image/*" onChange={async (event) => {
+        <div className="new-wall-form"><label className="field-label">Назва нової стіни<input value={newWallName} onChange={(event) => setNewWallName(event.target.value)} placeholder={`Стіна ${walls.length + 1}`} maxLength={40} /></label>
+          <label className="primary-button wall-upload-button">Додати фото стіни <span>↗</span><input type="file" accept="image/*" onChange={async (event) => {
+            const file = event.target.files?.[0]
+            if (!file) return
+            setWallError('')
+            try { addWall({ name: newWallName.trim() || `Стіна ${walls.length + 1}`, image: await compressPhoto(file) }); setNewWallName(''); setSelectedRouteId(null) }
+            catch { setWallError('Не вдалося додати фото. Перевір його формат і вільне місце у сховищі браузера.') }
+            event.target.value = ''
+          }} /></label>
+          {wallError && <p className="form-error" role="alert">{wallError}</p>}
+        </div>
+        <label className="secondary-button replace-photo">Замінити фото цієї стіни<input type="file" accept="image/*" onChange={async (event) => {
           const file = event.target.files?.[0]
           if (!file) return
-          if (!window.confirm('Заміна фото очистить розмітку, маршрути й прогрес. Продовжити?')) { event.target.value = ''; return }
-          try { useAppStore.getState().replaceWallImage(await compressPhoto(file)); setSelectedRouteId(null) } catch { window.alert('Не вдалося прочитати це фото. Спробуй інше.') }
+          if (!window.confirm('Заміна фото цієї стіни очистить її розмітку, маршрути й прогрес. Продовжити?')) { event.target.value = ''; return }
+          try { replaceWallImage(activeWallId, await compressPhoto(file)); setSelectedRouteId(null) } catch { window.alert('Не вдалося прочитати це фото. Спробуй інше.') }
           event.target.value = ''
-        }} /></label>}
-        {(holds.length > 0 || routes.length > 0) && <button className="clear-mapping-button" onClick={() => useAppStore.getState().clearWallMapping()}>Очистити розмітку</button>}
+        }} /></label>
+        {(activeWallHolds.length > 0 || activeWallRoutes.length > 0) && <button className="clear-mapping-button" onClick={() => clearWallMapping(activeWallId)}>Очистити розмітку цієї стіни</button>}
       </section>}
 
       {mode === 'CREATE_ROUTE' && <section className="quick-panel">
@@ -141,6 +163,7 @@ export default function App() {
         <div className="transparent-mode-row"><span><strong>Прозорий режим</strong><small>Приховати невідмічені кільця</small></span><button type="button" role="switch" aria-checked={transparentMode} aria-label="Прозорий режим" className={transparentMode ? 'toggle-switch is-on' : 'toggle-switch'} onClick={() => setTransparentMode((enabled) => !enabled)}><i /></button></div>
         <p className="panel-copy">Торкнись зачіпки, щоб змінити роль: рука → старт → нога → топ. Рука — початковий стан.</p>
         <div className="route-form">
+          <label className="field-label">Фото стіни<select value={currentWallId} onChange={(event) => { setRouteWallId(event.target.value); setSelectedRoles({}) }}>{walls.map((wall) => <option key={wall.id} value={wall.id}>{wall.name}</option>)}</select></label>
           <label className="field-label">Назва<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Наприклад, Лимонна хвиля" maxLength={40} /></label>
           <label className="field-label">Складність<select value={grade} onChange={(event) => setGrade(event.target.value)}>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>
           <div className="field-label">Рейтинг <div className="rating-picker" aria-label="Рейтинг маршруту">{[1, 2, 3, 4, 5].map((value) => <button key={value} className={rating >= value ? 'rating-star is-active' : 'rating-star'} aria-label={`${value} з 5`} onClick={() => setRating(value)}>★</button>)}</div></div>
@@ -162,7 +185,7 @@ export default function App() {
           const state = progress.find((item) => item.routeId === route.id)
           return <div key={route.id} className="route-card">
             <button className="route-select" onClick={() => setSelectedRouteId(route.id)}>
-              <span className="route-swatch" /><span className="route-info"><strong>{route.name}</strong><small>{route.grade} · {route.holds.length} зачіпок · {'★'.repeat(route.rating)}</small></span><span className={state ? `progress-tag ${state.status.toLowerCase()}` : 'route-arrow'}>{state ? state.status === 'SENT' ? 'Пройдено' : 'Проєкт' : '›'}</span>
+              <span className="route-swatch" /><span className="route-info"><strong>{route.name}</strong><small>{route.grade} · {walls.find((wall) => wall.id === route.wallId)?.name ?? 'Стіна'} · {route.holds.length} зачіпок</small></span><span className={state ? `progress-tag ${state.status.toLowerCase()}` : 'route-arrow'}>{state ? state.status === 'SENT' ? 'Пройдено' : 'Проєкт' : '›'}</span>
             </button>
             <button className="edit-route" aria-label={`Редагувати маршрут ${route.name}`} title="Редагувати маршрут" onClick={() => handleEditRoute(route)}>✎</button>
             <button className="delete-route" aria-label={`Видалити маршрут ${route.name}`} title="Видалити маршрут" onClick={() => deleteRoute(route.id)}>×</button>
@@ -171,8 +194,8 @@ export default function App() {
       </section>}
 
       {mode === 'VIEW' && selectedRoute && <section className="quick-panel">
-        <div className="section-heading"><div><p className="eyebrow">МАРШРУТ · {selectedRoute.grade}</p><h2>{selectedRoute.name}</h2></div><span className="count-pill">{'★'.repeat(selectedRoute.rating)}</span></div>
-        <p className="panel-copy">{selectedRoute.holds.length} зачіпок на стіні. Старт і топ позначені кольором.</p>
+        <div className="section-heading"><div><p className="eyebrow">{walls.find((wall) => wall.id === selectedRoute.wallId)?.name ?? 'СТІНА'} · {selectedRoute.grade}</p><h2>{selectedRoute.name}</h2></div><span className="count-pill">{'★'.repeat(selectedRoute.rating)}</span></div>
+        <p className="panel-copy">{selectedRoute.holds.length} зачіпок на цій стіні. Старт і топ позначені кольором.</p>
         <div className="progress-panel"><div className="progress-heading"><span>Мій прогрес</span><span className="progress-date">{currentProgress ? new Date(currentProgress.date).toLocaleDateString('uk-UA') : 'Ще не відмічено'}</span></div><div className="progress-actions"><button className={currentProgress?.status === 'SENT' ? 'progress-button sent is-active' : 'progress-button sent'} onClick={() => updateProgress(selectedRoute.id, 'SENT')}>✓ Пройдено</button><button className={currentProgress?.status === 'PROJECTING' ? 'progress-button project is-active' : 'progress-button project'} onClick={() => updateProgress(selectedRoute.id, 'PROJECTING')}>◷ Проєктую</button></div></div>
         <div className="route-detail-actions"><button className="secondary-button" onClick={() => handleEditRoute(selectedRoute)}>Редагувати маршрут</button><button className="danger-button" onClick={() => deleteRoute(selectedRoute.id)}>Видалити</button></div>
       </section>}
