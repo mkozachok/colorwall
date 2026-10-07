@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import WallCanvas, { compressPhoto } from './components/WallCanvas'
+import RouteHoldGallery from './components/RouteHoldGallery'
 import { DEFAULT_WALL_ID, useAppStore, type AppMode, type HoldRole } from './store/useAppStore'
 
 const grades = ['5a', '5b', '5c', '6a', '6a+', '6b', '6b+', '6c', '7a', '7a+', '7b', '7b+', '7c', '8a']
@@ -37,7 +38,17 @@ export default function App() {
   const [newWallName, setNewWallName] = useState('')
   const [wallError, setWallError] = useState('')
   const selectedRoute = routes.find((route) => route.id === selectedRouteId)
+  const selectedRouteWall = selectedRoute ? walls.find((wall) => wall.id === selectedRoute.wallId) : undefined
+  const selectedRouteHolds = selectedRoute?.holds.flatMap((item) => {
+    const hold = holds.find((candidate) => candidate.id === item.holdId && candidate.wallId === selectedRoute.wallId)
+    return hold ? [{ hold, role: item.role }] : []
+  }) ?? []
   const currentWallId = routeWallId && walls.some((wall) => wall.id === routeWallId) ? routeWallId : activeWallId
+  const draftWall = walls.find((wall) => wall.id === currentWallId)
+  const selectedDraftHolds = Object.entries(selectedRoles).flatMap(([holdId, role]) => {
+    const hold = holds.find((item) => item.id === holdId && item.wallId === currentWallId)
+    return hold ? [{ hold, role }] : []
+  })
   const activeWallHolds = holds.filter((hold) => hold.wallId === activeWallId)
   const activeWallRoutes = routes.filter((route) => route.wallId === activeWallId)
   const defaultRouteWallId = walls.some((wall) => wall.id === DEFAULT_WALL_ID) ? DEFAULT_WALL_ID : activeWallId
@@ -168,7 +179,7 @@ export default function App() {
           <label className="field-label">Складність<select value={grade} onChange={(event) => setGrade(event.target.value)}>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>
           <div className="field-label">Рейтинг <div className="rating-picker" aria-label="Рейтинг маршруту">{[1, 2, 3, 4, 5].map((value) => <button key={value} className={rating >= value ? 'rating-star is-active' : 'rating-star'} aria-label={`${value} з 5`} onClick={() => setRating(value)}>★</button>)}</div></div>
           <div className="role-legend">{Object.entries(roleNames).map(([role, label]) => <span key={role}><i style={{ background: roleColors[role as HoldRole] }} />{label}</span>)}</div>
-          {Object.keys(selectedRoles).length > 0 && <div className="selected-holds"><span className="selected-holds-title">Зачіпки маршруту</span>{Object.entries(selectedRoles).map(([holdId, role], index) => <div className="selected-hold-row" key={holdId}><span><i style={{ background: roleColors[role] }} />Зачіпка {index + 1} · {roleNames[role]}</span><button type="button" aria-label={`Прибрати зачіпку ${index + 1} з маршруту`} onClick={() => setSelectedRoles((previous) => { const next = { ...previous }; delete next[holdId]; return next })}>×</button></div>)}</div>}
+          {draftWall && selectedDraftHolds.length > 0 && <RouteHoldGallery wall={draftWall} items={selectedDraftHolds} onRemove={(holdId) => setSelectedRoles((previous) => { const next = { ...previous }; delete next[holdId]; return next })} />}
           {formError && <p className="form-error" role="alert">{formError}</p>}
           <button className="primary-button" onClick={handleSaveRoute}>{editingRouteId ? 'Зберегти зміни' : 'Зберегти маршрут'} <span>↗</span></button>
           {editingRouteId && <button className="secondary-button cancel-edit-button" onClick={cancelRouteEdit}>Скасувати редагування</button>}
@@ -198,6 +209,7 @@ export default function App() {
         <p className="panel-copy">{selectedRoute.holds.length} зачіпок на цій стіні. Старт і топ позначені кольором.</p>
         <div className="progress-panel"><div className="progress-heading"><span>Мій прогрес</span><span className="progress-date">{currentProgress ? new Date(currentProgress.date).toLocaleDateString('uk-UA') : 'Ще не відмічено'}</span></div><div className="progress-actions"><button className={currentProgress?.status === 'SENT' ? 'progress-button sent is-active' : 'progress-button sent'} onClick={() => updateProgress(selectedRoute.id, 'SENT')}>✓ Пройдено</button><button className={currentProgress?.status === 'PROJECTING' ? 'progress-button project is-active' : 'progress-button project'} onClick={() => updateProgress(selectedRoute.id, 'PROJECTING')}>◷ Проєктую</button></div></div>
         <div className="route-detail-actions"><button className="secondary-button" onClick={() => handleEditRoute(selectedRoute)}>Редагувати маршрут</button><button className="danger-button" onClick={() => deleteRoute(selectedRoute.id)}>Видалити</button></div>
+        {selectedRouteWall && <RouteHoldGallery wall={selectedRouteWall} items={selectedRouteHolds} />}
       </section>}
 
       <footer className="app-footer"><span className="status-dot" /> Дані зберігаються на пристрої <span className="footer-divider">·</span> Працює офлайн</footer>

@@ -75,18 +75,25 @@ h1 { margin-bottom: 0; font-size: 20px; letter-spacing: -.04em; }
 .toggle-switch i { display: block; width: 24px; height: 24px; border-radius: 50%; background: $color-muted; transition: transform .18s ease, background .18s ease; }
 .toggle-switch.is-on { border-color: rgba(213,255,111,.45); background: rgba(213,255,111,.18); }
 .toggle-switch.is-on i { transform: translateX(20px); background: $color-accent; }
-.selected-holds { display: grid; gap: 5px; padding: 10px; border: 1px solid $color-line; border-radius: 14px; background: $color-bg; }
-.selected-holds-title { margin-bottom: 2px; color: $color-muted; font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .08em; }
-.selected-hold-row { display: flex; align-items: center; justify-content: space-between; min-height: 40px; color: $color-text; font-size: 11px; }
-.selected-hold-row span { display: flex; align-items: center; gap: 8px; }
-.selected-hold-row i { width: 9px; height: 9px; border-radius: 50%; }
-.selected-hold-row button { width: 40px; height: 40px; border: 0; border-radius: 10px; color: $color-muted; background: transparent; font-size: 22px; }
 .cancel-edit-button { width: 100%; }
 .wall-select-label { margin-bottom: 13px; }
 .new-wall-form { display: grid; gap: 10px; margin: 13px 0; padding: 13px; border: 1px solid $color-line; border-radius: 15px; background: $color-bg; }
 .wall-upload-button { position: relative; display: flex; align-items: center; cursor: pointer; }
 .wall-upload-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .route-info small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-hold-gallery { display: grid; gap: 13px; margin-top: 20px; padding-top: 17px; border-top: 1px solid $color-line; }
+.gallery-heading { display: flex; align-items: center; justify-content: space-between; }
+.gallery-heading h3 { margin: 0; font-size: 16px; letter-spacing: -.03em; }
+.route-hold-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px 8px; }
+.route-hold-item { display: grid; justify-items: center; gap: 7px; min-width: 0; }
+.route-hold-thumb { position: relative; width: min(100%, 104px); aspect-ratio: 1; }
+.route-hold-image { position: relative; width: 100%; height: 100%; overflow: hidden; border: 1px solid $color-line; border-radius: 50%; background: $color-surface-raised; }
+.route-hold-image canvas { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.route-hold-remove { position: absolute; z-index: 2; top: -13px; right: -13px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 0; color: $color-muted; background: transparent; }
+.route-hold-remove svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.route-hold-remove:active { color: $color-top; }
+.route-hold-marker { position: absolute; top: 50%; left: 50%; border: 2px solid; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 9px currentColor; }
+.route-hold-item strong { max-width: 100%; overflow: hidden; color: $color-muted; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .route-swatch { width: 11px; height: 32px; border-radius: 8px; background: $color-accent; }
 .route-info { display: grid; gap: 4px; flex: 1; }
 .route-info strong { font-size: 13px; }
